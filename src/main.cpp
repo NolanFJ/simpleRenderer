@@ -1,6 +1,9 @@
-#include "tgaimage.hpp"
 #include <iostream> // debugging
 #include <cmath>
+#include <ctime>
+
+#include "tgaimage.hpp"
+
 
 // define multiple colors BGRA order
 constexpr TGAColor white = {255, 255, 255, 255};
@@ -26,15 +29,22 @@ void drawLine(int x1, int y1, int x2, int y2, TGAImage &framebuffer, TGAColor co
         std::swap(y1, y2);
     }
 
-    for (int x {x1}; x <= x2; x++) {
-        float t = (x - x1) / static_cast<float> (x2 - x1);
-        int y = std::round(y1 + t * (y2 - y1));
+    int y = y1;
+    int ierror = 0;
 
+    for (int x {x1}; x <= x2; x++) {
         if (steep) {
             framebuffer.set(y, x, color);
         }
         else {
             framebuffer.set(x, y, color);  
+        }
+
+        ierror += 2 * std::abs(y2 - y1);
+        
+        if (ierror > (x2 - x1)) {
+            y += y2 > y1 ? 1 : -1;
+            ierror -= 2 * (x2 - x1);
         }
     }   
 }
@@ -45,14 +55,21 @@ int main()
     constexpr int height = 64;
     TGAImage framebuffer(width, height, TGAImage::RGB);
 
-    int ax = 7, ay = 3;
-    int bx = 12, by = 37;
-    int cx = 62, cy = 53;
+    std::srand(std::time(0));
 
-    drawLine(ax, ay, bx, by, framebuffer, blue);
-    drawLine(cx, cy, bx, by, framebuffer, green);
-    drawLine(cx, cy, ax, ay, framebuffer, yellow);
-    drawLine(ax, ay, cx, cy, framebuffer, red);
+    for (int i {}; i < (1<<24); ++i) {
+        int ax = rand() % width;
+        int ay = rand() % height;
+        int bx = rand() % width;
+        int by = rand() & height;
+
+        drawLine(ax, ay, bx, by, framebuffer, {
+            static_cast<std::uint8_t>(rand() % 256),
+            static_cast<std::uint8_t>(rand() % 256),
+            static_cast<std::uint8_t>(rand() % 256),
+            static_cast<std::uint8_t>(rand() % 255),
+        });
+    }
 
     framebuffer.write_tga_file("framebuffer.tga");
 
